@@ -1,10 +1,9 @@
 <template>
   <div class="bankist-app">
-    <!-- LOGIN SCREEN -->
-    <div v-if="!currentAccount" class="login">
+    <!-- for opacity -->
+    <div class="login" v-show="!currentAccount">
       <h2>Log in to get started</h2>
 
-      <!-- Render input fields dynamically -->
       <div v-for="(input, index) in recipe.Inputs" :key="index">
         <component
           :is="input.ComponentName"
@@ -13,7 +12,6 @@
         />
       </div>
 
-      <!-- Render buttons dynamically -->
       <div v-for="(btn, index) in recipe.Buttons" :key="'btn-' + index">
         <component
           :is="btn.ComponentName"
@@ -23,30 +21,39 @@
       </div>
     </div>
 
-    <!-- DASHBOARD SCREEN -->
-    <div v-else class="dashboard">
-      <h2>Welcome back, {{ currentAccount.owner.split(' ')[0] }} 👋</h2>
-      <!-- Timer -->
+    <!-- for opacity -->
+    <div
+      class="dashboard"
+      :style="{
+        opacity: dashboardOpacity,
+        visibility: dashboardVisibility,
+        pointerEvents: dashboardOpacity === 0 ? 'none' : 'auto'
+      }"
+    >
+      <h2>Welcome back, {{ currentAccount?.owner?.split(' ')[0] }} 👋</h2>
       <AccountTimer @expired="handleSessionExpired" />
 
       <div class="balance">
         <p>Current Balance:</p>
-        <h1>{{ formattedBalance  }}</h1>
+        <h1>{{ formattedBalance }}</h1>
       </div>
 
       <!-- for currency -->
-      <TransactionMovements
-        :movements="currentAccount.movements"
-        :locale="currentAccount.locale"
-        :currency="currentAccount.currency"
-        @loan-request="requestLoan"
-      />
-      <!-- for currency -->
-      <MovementSummary
-        :account="currentAccount"
-        :locale="currentAccount.locale"
-        :currency="currentAccount.currency"
-      />
+     <TransactionMovements
+  v-if="currentAccount"
+  :movements="currentAccount.movements"
+  :locale="currentAccount.locale"
+  :currency="currentAccount.currency"
+  @loan-request="requestLoan"
+/>
+
+<!-- for currency -->
+<MovementSummary
+  v-if="currentAccount"
+  :account="currentAccount"
+  :locale="currentAccount.locale"
+  :currency="currentAccount.currency"
+/>
     </div>
   </div>
 </template>
@@ -81,12 +88,17 @@ export default {
         out: 0,
         interest: 0,
       },
+      // opacity
+      dashboardOpacity: 0,
+          dashboardVisibility: "hidden",
+
     };
   },
 
  computed: {
   //for currency
     formattedBalance() {
+      if (!this.currentAccount) return "₱0.00"; 
     return formatCurrency(
       this.currentBalance,
       this.currentAccount.locale,
@@ -122,7 +134,12 @@ export default {
     //timer
    handleSessionExpired() {
       alert("⏰ Session expired!");
-      this.currentAccount = null;
+      // for opacity
+      this.dashboardOpacity = 0;
+      setTimeout(() => {
+        this.dashboardVisibility = "hidden";
+        this.currentAccount = null;
+      }, 400);
     },
     createUsernames() {
       this.accounts.forEach(acc => {
@@ -143,11 +160,16 @@ export default {
           acc.pin === Number(this.form.loginPin)
       );
 
-      if (account) {
+     if (account) {
         this.currentAccount = account;
         this.calcDisplayBalance(account);
         this.form.loginUsername = "";
         this.form.loginPin = "";
+        // for opacity
+              this.dashboardVisibility = "visible";
+        setTimeout(() => {
+          this.dashboardOpacity = 1;
+        }, 200);
       } else {
         alert("Invalid credentials ❌");
       }
@@ -171,13 +193,19 @@ export default {
   font-family: "Poppins", sans-serif;
   color: #333;
 }
-
-.login, .dashboard {
+/* for opacity */
+.login,
+.dashboard {
   background: white;
   padding: 2rem;
   border-radius: 1.5rem;
   box-shadow: 0 2rem 3rem rgba(0, 0, 0, 0.1);
   width: 400px;
+  transition: opacity 0.8s ease; 
+}
+/* for opacity */
+.dashboard {
+  opacity: 0; 
 }
 
 .balance {
